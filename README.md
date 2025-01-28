@@ -4,4 +4,4 @@
 
 #### Projetos desenvolvidos:
 
-✅ - Jogo da adivinhação
+✅ - [Jogo da adivinhação](https://github.com/guilchaves/ignite-go/tree/main/projetos/guessingGame)
