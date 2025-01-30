@@ -4,4 +4,5 @@
 
 #### Projetos desenvolvidos:
 
-✅ - [Jogo da adivinhação](https://github.com/guilchaves/ignite-go/tree/main/projetos/guessingGame)
+✅ - [Jogo da adivinhação](https://github.com/guilchaves/ignite-go/tree/main/projetos/guessingGame)</br>
+✅ - [One Billion Row Challenge](https://github.com/guilchaves/ignite-go/tree/main/projetos/2-one-billion-row-challenge)
