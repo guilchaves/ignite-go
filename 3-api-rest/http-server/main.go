@@ -7,19 +7,28 @@ import (
 	"time"
 )
 
+func Log(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		begin := time.Now()
+		next.ServeHTTP(w, r)
+		fmt.Println(r.URL.String(), r.Method, time.Since(begin))
+	})
+}
+
 func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc(
-		"/healthcheck",
+		"/api/users/{id}",
 		func(w http.ResponseWriter, r *http.Request) {
+			r.PathValue("id")
 			fmt.Fprintln(w, "hello, world")
 		},
 	)
 
 	srv := &http.Server{
 		Addr:                         ":8080",
-		Handler:                      mux,
+		Handler:                      Log(mux),
 		DisableGeneralOptionsHandler: false,
 		ReadTimeout:                  10 * time.Second,
 		WriteTimeout:                 10 * time.Second,
