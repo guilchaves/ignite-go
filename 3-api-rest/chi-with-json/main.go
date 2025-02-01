@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -20,14 +23,14 @@ type Response struct {
 func sendJSON(w http.ResponseWriter, resp Response, status int) {
 	data, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Println("error during json marshal", err)
+		slog.Error("error during json marshal", "error", err)
 		sendJSON(w, Response{Error: "something went wrong"}, http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(status)
 	if _, err := w.Write(data); err != nil {
-		fmt.Println("error sending response")
+		slog.Error("error sending response", "error", err)
 	}
 }
 
@@ -35,11 +38,53 @@ type User struct {
 	Username string
 	ID       int64 `json:"id,string"`
 	Role     string
-	Password string `json:"-"`
+	Password Password `json:"-"`
 }
 
-func main() {
+type Password string
 
+func (p Password) String() string {
+	return "[REDACTED]"
+}
+
+func (p Password) LogValue() slog.Value {
+	return slog.StringValue("[REDACTED]")
+}
+
+const LevelFoo = slog.Level(-50)
+
+func main() {
+	p := Password("123456")
+	u := User{Password: p}
+	slog.Info("password", "p", u)
+	opts := &slog.HandlerOptions{
+		AddSource: true,
+		Level:     LevelFoo,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == "level" {
+				level := a.Value.String()
+				if level == "DEBUG-46" {
+					a.Value = slog.StringValue("FOO")
+				}
+			}
+			return a
+		},
+	}
+	l := slog.New(slog.NewJSONHandler(os.Stdout, opts))
+	slog.SetDefault(l)
+	slog.Debug("foo")
+	slog.Info("starting server", "version", "1.0.0", "port", "8080")
+	l = l.With(slog.Group("app_info", slog.String("version", "1.0.0")))
+	l.Info("this is a test", "user", u)
+	l.LogAttrs(context.Background(), LevelFoo, "any message")
+	l.LogAttrs(
+		context.Background(), slog.LevelInfo, "http request received",
+		slog.Group("http_data",
+			slog.String("method", http.MethodGet),
+			slog.Int("status", http.StatusOK),
+		),
+		slog.Duration("time_taken", time.Second),
+	)
 	r := chi.NewMux()
 
 	r.Use(middleware.Recoverer)
@@ -100,7 +145,7 @@ func handlePostUsers(db map[int64]User) http.HandlerFunc {
 				sendJSON(w, Response{Error: "body too large"}, http.StatusRequestEntityTooLarge)
 				return
 			}
-			fmt.Println(err)
+			slog.Error("error reading body", "error", err)
 			sendJSON(w, Response{Error: "something went wrong"}, http.StatusInternalServerError)
 			return
 		}
